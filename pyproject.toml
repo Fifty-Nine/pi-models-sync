@@ -1,0 +1,115 @@
+[project]
+name = "pi-models-sync"
+version = "0.1.0"
+description = "A utility for keeping pi models.json in sync with upstream providers."
+requires-python = ">=3.12"
+dependencies = [
+]
+
+[project.scripts]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0",
+    "pre-commit>=3.6.0",
+    "pytest-cov>=7.1.0",
+    "ast-grep-cli>=0.42.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pi_models_sync"]
+
+[tool.ruff]
+line-length = 80
+target-version = "py312"
+output-format = "concise"
+
+[tool.ruff.lint]
+select = [
+    "A",
+    "ANN",
+    "ASYNC",
+    "B",
+    "BLE",
+    "C4",
+    "C90",
+    "COM",
+    "E",
+    "ERA",
+    "EXE",
+    "F",
+    "FA",
+    "FBT",
+    "FLY",
+    "FURB",
+    "G",
+    "I",
+    "ICN",
+    "ISC",
+    "LOG",
+    "N",
+    "PERF",
+    "PGH",
+    "PIE",
+    "PLC",
+    "PLE",
+    "PLW",
+    "PT",
+    "PTH",
+    "Q",
+    "RSE",
+    "RET",
+    "RUF",
+    "SLF",
+    "SIM",
+    "T10",
+    "T20",
+    "TC",
+    "TID",
+    "TRY",
+    "UP",
+    "W",
+]
+ignore = [
+    # error-suffix-on-exception-name; poorly implemented dogmatic rule
+    "N818",
+
+    # any-type; principled but impractical
+    "ANN401",
+
+    # missing-trailing-comma; incompatible with formatter
+    "COM812"
+]
+extend-safe-fixes = ["TC001", "TC002", "TC003", "TC004"]
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["SLF001"]
+
+[tool.mypy]
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disable_error_code = ["prop-decorator"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=pi_models_sync --cov-report=term-missing:skip-covered --cov-fail-under=100"
+xfail_strict = true
+
+[tool.coverage.run]
+
+[tool.coverage.report]
+precision = 2
