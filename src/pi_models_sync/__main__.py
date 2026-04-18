@@ -1,0 +1,71 @@
+from __future__ import annotations
+
+import logging
+
+import click
+
+# Configure basic logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+
+@click.command()
+@click.option(
+    "--litellm-url",
+    default="http://localhost:4000",
+    help="URL for the LiteLLM Management API.",
+)
+@click.option(
+    "--pi-models-path",
+    default="./models.json",
+    help="Output path for the generated models.json.",
+)
+@click.option(
+    "--cloud-ollama-url",
+    default=None,
+    help="URL for the Cloud Ollama instance.",
+)
+@click.option(
+    "--local-ollama-url",
+    default="http://localhost:11434",
+    help="URL for the Local Ollama instance.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be done without modifying anything.",
+)
+@click.option(
+    "--pi-only",
+    is_flag=True,
+    help="Skip discovery and syncing, just generate models.json.",
+)
+def cli(
+    litellm_url: str,
+    pi_models_path: str,
+    cloud_ollama_url: str | None,
+    local_ollama_url: str,
+    dry_run: bool,  # noqa: FBT001
+    pi_only: bool,  # noqa: FBT001
+) -> None:
+    """Sync models to LiteLLM, then generate Pi models.json."""
+    logger.info("Starting pi-models-sync")
+    logger.info("Configuration:")
+    logger.info("  LiteLLM URL: %s", litellm_url)
+    logger.info("  Output Path: %s", pi_models_path)
+    if cloud_ollama_url:
+        logger.info("  Cloud Ollama URL: %s", cloud_ollama_url)
+    logger.info("  Local Ollama URL: %s", local_ollama_url)
+    logger.info("  Dry Run: %s", dry_run)
+    logger.info("  Pi Only: %s", pi_only)
+
+    # Placeholder for Phase 2-5 implementation
+    logger.info("Phase 1 complete. Core CLI initialized.")
+
+
+if __name__ == "__main__":
+    cli()  # pragma: no cover

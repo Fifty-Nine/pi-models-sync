@@ -4,9 +4,11 @@ version = "0.1.0"
 description = "A utility for keeping pi models.json in sync with upstream providers."
 requires-python = ">=3.12"
 dependencies = [
+    "click>=8.3.2",
 ]
 
 [project.scripts]
+pi-models-sync = "pi_models_sync.__main__:cli"
 
 [build-system]
 requires = ["hatchling"]
