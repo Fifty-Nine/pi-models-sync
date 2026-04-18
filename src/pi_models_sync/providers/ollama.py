@@ -38,15 +38,18 @@ class OllamaProvider(ModelProvider):
             return
 
         for model_data in data.get("models", []):
-            yield self._parse_model(model_data)
+            if model := self._parse_model(model_data):
+                yield model
 
     def _get_headers(self) -> dict[str, str]:
         """Get headers for the request."""
         return {}
 
-    def _parse_model(self, data: dict[str, Any]) -> DiscoveredModel:
+    def _parse_model(self, data: dict[str, Any]) -> DiscoveredModel | None:
         """Parse raw model data into a DiscoveredModel."""
-        name = data.get("name", "")
+        name = data.get("name")
+        if not name:
+            return None
         # Ollama /api/tags does not return context window, max tokens, etc
         # directly by default. We populate what we can.
         return DiscoveredModel(
@@ -85,7 +88,7 @@ class CloudOllamaProvider(OllamaProvider):
 
     def _load_api_key(self, path: pathlib.Path) -> None:
         try:
-            with path.open() as f:
+            with path.open(encoding="utf-8") as f:
                 self._api_key = f.read().strip()
             if not self._api_key:
                 # Treat empty file as error handled in the same way
@@ -95,9 +98,9 @@ class CloudOllamaProvider(OllamaProvider):
                     "Provider will be disabled.",
                     path,
                 )
-        except (FileNotFoundError, PermissionError) as e:
+        except OSError as e:
             logger.warning(
-                "Cloud Ollama API key file not found or invalid at %s. "
+                "Cloud Ollama API key file could not be read at %s. "
                 "Provider will be disabled. Error: %s",
                 path,
                 e,

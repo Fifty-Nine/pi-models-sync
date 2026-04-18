@@ -26,6 +26,7 @@ def test_local_ollama_provider_success() -> None:
             "models": [
                 {"name": "llama3:8b"},
                 {"name": "qwen:7b"},
+                {"some_other_field": "value"},  # test invalid model data
             ]
         },
         status=200,
