@@ -4,7 +4,7 @@
 Implement a Python CLI tool using `click` that discovers models from Ollama instances, syncs them to a LiteLLM gateway, and generates a `models.json` file for the Pi coding agent. It must ensure older config files are backed up sequentially. Additionally, the tool will support a `--pi-only` mode to skip discovery and syncing, instead just querying the LiteLLM gateway's standard `/v1/models` endpoint (using an inference key) to generate the `models.json` file.
 
 ## Key Files & Context
-- `sync-models.py`: Main CLI entry point.
+- `src/pi_models_sync/__main__.py`: Main CLI entry point.
 - `providers.py`: Module for interacting with Local and Cloud Ollama instances.
 - `litellm_client.py`: Module for interacting with the LiteLLM API (Management API for syncing, OpenAI-compatible `/v1/models` API for read-only mode).
 - `pi_config.py`: Module handling the generation and sequential backup of `models.json`.
@@ -38,7 +38,7 @@ Implement a Python CLI tool using `click` that discovers models from Ollama inst
 3. Write the new JSON configuration to the specified output path (default: `~/.pi/agent/models.json` or current directory).
 
 ### Phase 5: Integration & Verification
-1. Wire the phases together in the main `click` function in `sync-models.py`.
+1. Wire the phases together in the main `click` function in `src/pi_models_sync/__main__.py`.
 2. Implement conditional logic: if `--pi-only` is passed, skip Phase 2 and Phase 3 (steps 3/4), and instead execute Phase 3 (step 5) to gather models before running Phase 4.
 3. Implement end-to-end testing with mock endpoints to verify:
    - Providers correctly yield models.
