@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import pathlib
 
 import click
 
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 )
 @click.option(
     "--pi-models-path",
-    type=click.Path(resolve_path=True),
+    type=click.Path(resolve_path=True, path_type=pathlib.Path),
     default="~/.pi/agent/models.json",
     help="Output path for the generated models.json.",
 )
@@ -53,7 +54,7 @@ logger = logging.getLogger(__name__)
 def cli(
     *,
     litellm_url: str,
-    pi_models_path: str,
+    pi_models_path: pathlib.Path,
     cloud_ollama_url: str | None,
     local_ollama_url: str,
     dry_run: bool,
