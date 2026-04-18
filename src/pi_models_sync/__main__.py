@@ -11,6 +11,7 @@ def setup_logging() -> None:
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
+        force=True,
     )
 
 
@@ -25,7 +26,8 @@ logger = logging.getLogger(__name__)
 )
 @click.option(
     "--pi-models-path",
-    default="./models.json",
+    type=click.Path(resolve_path=True),
+    default="~/.pi/agent/models.json",
     help="Output path for the generated models.json.",
 )
 @click.option(
