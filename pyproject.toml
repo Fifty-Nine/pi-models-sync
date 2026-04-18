@@ -5,6 +5,7 @@ description = "A utility for keeping pi models.json in sync with upstream provid
 requires-python = ">=3.12"
 dependencies = [
     "click>=8.3.2",
+    "requests>=2.31.0",
 ]
 
 [project.scripts]
@@ -22,6 +23,8 @@ dev = [
     "pre-commit>=3.6.0",
     "pytest-cov>=7.1.0",
     "ast-grep-cli>=0.42.0",
+    "responses>=0.25.0",
+    "types-requests>=2.33.0.20260408",
 ]
 
 [tool.hatch.build.targets.wheel]

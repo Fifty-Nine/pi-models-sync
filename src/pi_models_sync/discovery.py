@@ -10,3 +10,7 @@ class DiscoveredModel:
     id: str
     name: str
     provider: str
+    context_window: int | None = None
+    max_tokens: int | None = None
+    input_types: list[str] | None = None
+    reasoning: bool | None = None
