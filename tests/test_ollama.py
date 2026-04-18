@@ -26,7 +26,10 @@ def test_local_ollama_provider_success() -> None:
             "models": [
                 {"name": "llama3:8b"},
                 {"name": "qwen:7b"},
-                {"some_other_field": "value"},  # test invalid model data
+                {
+                    "some_other_field": "value"
+                },  # test invalid model data missing name
+                "invalid_type_string",  # test invalid type in list
             ]
         },
         status=200,
@@ -55,6 +58,32 @@ def test_local_ollama_provider_network_error() -> None:
         body=requests.exceptions.ConnectionError("Connection refused"),
     )
 
+    models = list(provider.get_models())
+    assert len(models) == 0
+
+
+@responses.activate
+def test_local_ollama_provider_invalid_response_types() -> None:
+    config = ProviderConfig(
+        base_url="http://localhost:11434", provider_type="local"
+    )
+    provider = LocalOllamaProvider(config)
+
+    # Test top level not a dict
+    responses.add(
+        responses.GET,
+        "http://localhost:11434/api/tags",
+        json=["not", "a", "dict"],
+        status=200,
+    )
+    models = list(provider.get_models())
+    assert len(models) == 0
+    responses.replace(
+        responses.GET,
+        "http://localhost:11434/api/tags",
+        json={"models": "not_a_list"},
+        status=200,
+    )
     models = list(provider.get_models())
     assert len(models) == 0
 

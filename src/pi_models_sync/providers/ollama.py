@@ -37,7 +37,16 @@ class OllamaProvider(ModelProvider):
             )
             return
 
-        for model_data in data.get("models", []):
+        if not isinstance(data, dict):
+            return
+
+        models = data.get("models")
+        if not isinstance(models, list):
+            return
+
+        for model_data in models:
+            if not isinstance(model_data, dict):
+                continue
             if model := self._parse_model(model_data):
                 yield model
 
