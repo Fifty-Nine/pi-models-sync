@@ -4,12 +4,16 @@ import logging
 
 import click
 
+
 # Configure basic logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+def setup_logging() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,14 +49,16 @@ logger = logging.getLogger(__name__)
     help="Skip discovery and syncing, just generate models.json.",
 )
 def cli(
+    *,
     litellm_url: str,
     pi_models_path: str,
     cloud_ollama_url: str | None,
     local_ollama_url: str,
-    dry_run: bool,  # noqa: FBT001
-    pi_only: bool,  # noqa: FBT001
+    dry_run: bool,
+    pi_only: bool,
 ) -> None:
     """Sync models to LiteLLM, then generate Pi models.json."""
+    setup_logging()
     logger.info("Starting pi-models-sync")
     logger.info("Configuration:")
     logger.info("  LiteLLM URL: %s", litellm_url)
