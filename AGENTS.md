@@ -38,3 +38,7 @@ The project uses a `Makefile` to manage development tasks. Use these commands to
 - **Constraint:** Avoid deep nesting of logical blocks.
 - **Enforcement:** Logical control flow (if, for, while, try, with, match) and nested functions must not exceed **3 levels** of depth. This is enforced by `ast-grep` via `make lint-sg`.
 - **Remediation:** Use early returns (guard clauses), extract complex logic into separate functions, or flatten the control flow to maintain readability and stay within the depth limit.
+
+### Error Handling & Exception Management
+- **Constraint:** Do not catch and suppress exceptions (`requests.exceptions.RequestException`, `OSError`) to return `False` or empty collections, unless explicitly requested. Let exceptions propagate to the highest layer (e.g. the CLI wrapper) to strictly enforce API contracts.
+- **Constraint:** Use custom exception hierarchies. Do not use generic `raise Exception("Long formatted string")`, as our `ruff` linter may reject them. Define exceptions that take format arguments in `__init__`.
