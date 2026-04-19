@@ -22,9 +22,8 @@ class AuthConfigurationError(LiteLLMSyncError):
 
     def __init__(self, key_name: str) -> None:
         super().__init__(
-            "Required configuration key '"
-            + key_name
-            + "' is missing or unconfigured."
+            f"Required configuration key '{key_name}' is missing or "
+            "unconfigured."
         )
 
 
@@ -154,16 +153,8 @@ class LiteLLMClient:
             "api_base": provider_config.base_url,
         }
 
-        if provider_config.api_key_path:
-            path = pathlib.Path(provider_config.api_key_path)
-            try:
-                key = path.read_text(encoding="utf-8").strip()
-            except OSError as e:
-                raise ProviderKeyReadError(
-                    provider_config.api_key_path, str(e)
-                ) from e
-            if key:
-                litellm_params["api_key"] = key
+        if key := self._load_key(provider_config.api_key_path, "provider"):
+            litellm_params["api_key"] = key
 
         url = f"{self.base_url}/model/new"
         headers = {}
