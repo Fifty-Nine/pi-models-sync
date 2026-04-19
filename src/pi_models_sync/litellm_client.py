@@ -33,13 +33,6 @@ class InvalidResponseFormatError(LiteLLMSyncError):
         super().__init__(f"Unexpected response format from {url}: {data}")
 
 
-class InvalidResponseDataError(LiteLLMSyncError):
-    """Exception raised when the 'data' field is not of the expected type."""
-
-    def __init__(self, got_type: str) -> None:
-        super().__init__(f"Expected 'data' field to be a list, got {got_type}")
-
-
 class LiteLLMClient:
     """Client for interacting with the LiteLLM Gateway."""
 
@@ -80,7 +73,7 @@ class LiteLLMClient:
             logger.warning(
                 "LiteLLM %s key file is empty at %s.", key_name, path
             )
-            return ""
+
         return key
 
     def get_inference_models(self) -> list[str]:
@@ -103,18 +96,12 @@ class LiteLLMClient:
         response.raise_for_status()
 
         data = response.json()
-        if not isinstance(data, dict) or "data" not in data:
-            raise InvalidResponseFormatError(url, data)
 
-        models = data["data"]
-        if not isinstance(models, list):
-            raise InvalidResponseDataError(type(models).__name__)
-
-        return [
-            str(model["id"])
-            for model in models
-            if isinstance(model, dict) and "id" in model
-        ]
+        try:
+            models = data["data"]
+            return [model["id"] for model in models]
+        except (KeyError, TypeError) as e:
+            raise InvalidResponseFormatError(url, data) from e
 
     def get_configured_models(self) -> list[str]:
         """Fetch models currently configured in the LiteLLM instance.
@@ -133,19 +120,12 @@ class LiteLLMClient:
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
 
-        data = response.json()
-        if not isinstance(data, dict) or "data" not in data:
-            raise InvalidResponseFormatError(url, data)
-
-        models = data["data"]
-        if not isinstance(models, list):
-            raise InvalidResponseDataError(type(models).__name__)
-
-        return [
-            str(model["model_name"])
-            for model in models
-            if isinstance(model, dict) and "model_name" in model
-        ]
+        try:
+            data = response.json()
+            models = data["data"]
+            return [model["model_name"] for model in models]
+        except (TypeError, KeyError) as e:
+            raise InvalidResponseFormatError(url, data) from e
 
     def add_model(
         self, model: DiscoveredModel, provider_config: ProviderConfig

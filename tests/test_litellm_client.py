@@ -382,9 +382,7 @@ def test_get_inference_models_invalid_format_no_list() -> None:
         json={"data": "not_a_list"},
         status=200,
     )
-    with pytest.raises(
-        LiteLLMSyncError, match="Expected 'data' field to be a list"
-    ):
+    with pytest.raises(LiteLLMSyncError, match="Unexpected response format"):
         client.get_inference_models()
 
 
@@ -412,7 +410,5 @@ def test_get_configured_models_invalid_format_no_list() -> None:
         json={"data": "not_a_list"},
         status=200,
     )
-    with pytest.raises(
-        LiteLLMSyncError, match="Expected 'data' field to be a list"
-    ):
+    with pytest.raises(LiteLLMSyncError, match="Unexpected response format"):
         client.get_configured_models()
