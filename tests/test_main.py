@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import json
+import pathlib
+
+import responses
 from click.testing import CliRunner
 
 from pi_models_sync.__main__ import cli
 
 
-import json
-import responses
-
 @responses.activate
-def test_cli_defaults(tmp_path) -> None:
+def test_cli_defaults(tmp_path: pathlib.Path) -> None:
     # Setup mocks for default behavior (pi_only=False, dry_run=False)
     responses.add(
         responses.GET,
@@ -44,7 +45,7 @@ def test_cli_defaults(tmp_path) -> None:
         [
             "--pi-models-path",
             str(models_path),
-        ]
+        ],
     )
     assert result.exit_code == 0, result.exception
     assert "Starting pi-models-sync" in result.output
@@ -64,11 +65,13 @@ def test_cli_defaults(tmp_path) -> None:
     # Check POST /model/new was called for mixtral
     post_calls = [c for c in responses.calls if c.request.method == "POST"]
     assert len(post_calls) == 1
-    assert "mixtral" in post_calls[0].request.body.decode("utf-8")
+    req_body = post_calls[0].request.body
+    assert isinstance(req_body, bytes)
+    assert "mixtral" in req_body.decode("utf-8")
 
 
 @responses.activate
-def test_cli_with_args_and_dry_run(tmp_path) -> None:
+def test_cli_with_args_and_dry_run(tmp_path: pathlib.Path) -> None:
     # Set up files
     cloud_key = tmp_path / "cloud_ollama.key"
     cloud_key.write_text("test-cloud-key")
@@ -101,8 +104,7 @@ def test_cli_with_args_and_dry_run(tmp_path) -> None:
 
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
-        # Create dummy key files in the isolated filesystem dir, which is the CWD for invoke
-        import pathlib
+        # Create dummy key files in the isolated filesystem dir
         pathlib.Path("litellm_master.key").write_text("dummy")
         pathlib.Path("litellm_inference.key").write_text("dummy")
         pathlib.Path("cloud_ollama.key").write_text("dummy")
@@ -131,7 +133,7 @@ def test_cli_with_args_and_dry_run(tmp_path) -> None:
 
 
 @responses.activate
-def test_cli_pi_only(tmp_path) -> None:
+def test_cli_pi_only(tmp_path: pathlib.Path) -> None:
     responses.add(
         responses.GET,
         "http://localhost:4000/v1/models",
@@ -152,7 +154,9 @@ def test_cli_pi_only(tmp_path) -> None:
     )
 
     assert result.exit_code == 0, result.exception
-    assert "Running in pi-only mode, bypassing discovery and sync" in result.output
+    assert (
+        "Running in pi-only mode, bypassing discovery and sync" in result.output
+    )
     assert models_path.exists()
     config_data = json.loads(models_path.read_text(encoding="utf-8"))
     assert len(config_data["providers"]["litellm_gateway"]["models"]) == 2

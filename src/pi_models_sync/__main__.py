@@ -2,8 +2,14 @@ from __future__ import annotations
 
 import logging
 import pathlib
+from typing import TYPE_CHECKING
 
 import click
+
+if TYPE_CHECKING:
+    from pi_models_sync.litellm_client import LiteLLMClient
+    from pi_models_sync.providers.base import ModelProvider
+    from pi_models_sync.providers.config import ProviderConfig
 
 
 # Configure basic logging
@@ -72,11 +78,11 @@ def cli(
     logger.info("  Dry Run: %s", dry_run)
     logger.info("  Pi Only: %s", pi_only)
 
-    from pi_models_sync.discovery import DiscoveredModel
-    from pi_models_sync.litellm_client import LiteLLMClient
-    from pi_models_sync.pi_config import generate_pi_config
-    from pi_models_sync.providers.config import ProviderConfig
-    from pi_models_sync.providers.ollama import (
+    from pi_models_sync.discovery import DiscoveredModel  # noqa: PLC0415
+    from pi_models_sync.litellm_client import LiteLLMClient  # noqa: PLC0415
+    from pi_models_sync.pi_config import generate_pi_config  # noqa: PLC0415
+    from pi_models_sync.providers.config import ProviderConfig  # noqa: PLC0415
+    from pi_models_sync.providers.ollama import (  # noqa: PLC0415
         CloudOllamaProvider,
         LocalOllamaProvider,
     )
@@ -97,12 +103,14 @@ def cli(
         if not dry_run:
             api_key = client.inference_key or client.master_key or ""
             generate_pi_config(models, litellm_url, api_key, pi_models_path)
-            logger.info("Successfully generated models.json at %s", pi_models_path)
+            logger.info(
+                "Successfully generated models.json at %s", pi_models_path
+            )
     else:
         logger.info("Discovering and syncing models")
         configured_models = set(client.get_configured_models())
 
-        providers = []
+        providers: list[tuple[ModelProvider, ProviderConfig]] = []
         local_config = ProviderConfig(
             base_url=local_ollama_url, provider_type="ollama"
         )
@@ -117,13 +125,7 @@ def cli(
             providers.append((CloudOllamaProvider(cloud_config), cloud_config))
 
         for provider, config in providers:
-            for model in provider.get_models():
-                model_key = f"{model.provider}/{model.id}"
-                if model_key not in configured_models:
-                    logger.info("Adding new model: %s", model_key)
-                    client.add_model(model, config)
-                else:
-                    logger.info("Model already configured: %s", model_key)
+            _sync_provider_models(provider, config, client, configured_models)
 
         model_ids = client.get_inference_models()
         models = [
@@ -132,7 +134,25 @@ def cli(
         if not dry_run:
             api_key = client.inference_key or client.master_key or ""
             generate_pi_config(models, litellm_url, api_key, pi_models_path)
-            logger.info("Successfully generated models.json at %s", pi_models_path)
+            logger.info(
+                "Successfully generated models.json at %s", pi_models_path
+            )
+
+
+def _sync_provider_models(
+    provider: ModelProvider,
+    config: ProviderConfig,
+    client: LiteLLMClient,
+    configured_models: set[str],
+) -> None:
+    """Helper to sync models from a specific provider."""
+    for model in provider.get_models():
+        model_key = f"{model.provider}/{model.id}"
+        if model_key not in configured_models:
+            logger.info("Adding new model: %s", model_key)
+            client.add_model(model, config)
+        else:
+            logger.info("Model already configured: %s", model_key)
 
 
 if __name__ == "__main__":
