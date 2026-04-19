@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-import pathlib
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import click
@@ -32,6 +32,13 @@ def setup_logging() -> None:
 logger = logging.getLogger(__name__)
 
 
+def _resolve_path(path: Path | None) -> Path | None:
+    if path is None:
+        return None
+
+    return path.expanduser()
+
+
 @click.command()
 @click.option(
     "--litellm-url",
@@ -39,8 +46,19 @@ logger = logging.getLogger(__name__)
     help="URL for the LiteLLM Management API.",
 )
 @click.option(
+    "--litellm-master-key",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the LiteLLM master key file (default: litellm_master.key).",
+)
+@click.option(
+    "--litellm-inference-key",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the LiteLLM inference key file "
+    "(default: litellm_inference.key).",
+)
+@click.option(
     "--pi-models-path",
-    type=click.Path(resolve_path=True, path_type=pathlib.Path),
+    type=click.Path(resolve_path=True, path_type=Path),
     default="~/.pi/agent/models.json",
     help="Output path for the generated models.json.",
 )
@@ -48,6 +66,11 @@ logger = logging.getLogger(__name__)
     "--cloud-ollama-url",
     default=None,
     help="URL for the Cloud Ollama instance.",
+)
+@click.option(
+    "--cloud-ollama-key",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the Cloud Ollama API key file (default: cloud_ollama.key).",
 )
 @click.option(
     "--local-ollama-url",
@@ -67,8 +90,11 @@ logger = logging.getLogger(__name__)
 def cli(
     *,
     litellm_url: str,
-    pi_models_path: pathlib.Path,
+    litellm_master_key: Path | None,
+    litellm_inference_key: Path | None,
+    pi_models_path: Path,
     cloud_ollama_url: str | None,
+    cloud_ollama_key: Path | None,
     local_ollama_url: str,
     dry_run: bool,
     pi_only: bool,
@@ -76,19 +102,31 @@ def cli(
     """Sync models to LiteLLM, then generate Pi models.json."""
     setup_logging()
     logger.info("Starting pi-models-sync")
+
+    # Resolve keys from defaults if not provided
+    litellm_master_key = _resolve_path(litellm_master_key)
+    litellm_inference_key = _resolve_path(litellm_inference_key)
+    cloud_ollama_key = _resolve_path(cloud_ollama_key)
+    pi_models_path = pi_models_path.expanduser()
+
     logger.info("Configuration:")
     logger.info("  LiteLLM URL: %s", litellm_url)
+    logger.info("  LiteLLM Master Key: %s", litellm_master_key)
+    logger.info("  LiteLLM Inference Key: %s", litellm_inference_key)
     logger.info("  Output Path: %s", pi_models_path)
     if cloud_ollama_url:
         logger.info("  Cloud Ollama URL: %s", cloud_ollama_url)
+        logger.info("  Cloud Ollama Key: %s", cloud_ollama_key)
     logger.info("  Local Ollama URL: %s", local_ollama_url)
     logger.info("  Dry Run: %s", dry_run)
     logger.info("  Pi Only: %s", pi_only)
 
     client = LiteLLMClient(
         base_url=litellm_url,
-        master_key_path="litellm_master.key",
-        inference_key_path="litellm_inference.key",
+        master_key_path=str(litellm_master_key) if litellm_master_key else None,
+        inference_key_path=(
+            str(litellm_inference_key) if litellm_inference_key else None
+        ),
         dry_run=dry_run,
     )
 
@@ -98,7 +136,11 @@ def cli(
         _run_pi_only(client, models)
     else:
         _run_discovery_and_sync(
-            client, models, local_ollama_url, cloud_ollama_url
+            client,
+            models,
+            local_ollama_url,
+            cloud_ollama_url,
+            cloud_ollama_key,
         )
 
     api_key = client.inference_key or client.master_key or ""
@@ -145,6 +187,7 @@ def _run_discovery_and_sync(
     models: list[DiscoveredModel],
     local_ollama_url: str,
     cloud_ollama_url: str | None,
+    cloud_ollama_key: Path | None,
 ) -> None:
     logger.info("Running discovery and sync.")
     try:
@@ -156,15 +199,15 @@ def _run_discovery_and_sync(
     providers: list[ModelProvider] = []
     local_config = ProviderConfig(
         base_url=local_ollama_url,
-        provider_type="local-ollama",
+        provider_type="ollama_chat",
     )
     providers.append(LocalOllamaProvider(local_config))
 
     if cloud_ollama_url:
         cloud_config = ProviderConfig(
             base_url=cloud_ollama_url,
-            provider_type="cloud-ollama",
-            api_key_path="cloud_ollama.key",
+            provider_type="ollama_chat",
+            api_key_path=str(cloud_ollama_key) if cloud_ollama_key else None,
         )
         providers.append(CloudOllamaProvider(cloud_config))
 

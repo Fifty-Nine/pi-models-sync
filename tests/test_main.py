@@ -1,16 +1,32 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 import responses
 from click.testing import CliRunner
 
-from pi_models_sync.__main__ import cli
+from pi_models_sync.__main__ import _resolve_path, cli
 
 if TYPE_CHECKING:
     import pathlib
+
+
+def test_resolve_path() -> None:
+    """Test the _resolve_path helper function."""
+    # Test with None
+    assert _resolve_path(None) is None
+
+    # Test with a regular path
+    path = Path("/tmp/test.txt")
+    assert _resolve_path(path) == path
+
+    # Test with ~ (home directory)
+    home_path = Path("~")
+    resolved = _resolve_path(home_path)
+    assert resolved == Path.home()
 
 
 @pytest.fixture
