@@ -154,10 +154,19 @@ def test_get_configured_models(master_key_file: pathlib.Path) -> None:
     )
 
 
+@responses.activate
 def test_get_configured_models_no_master_key() -> None:
     client = LiteLLMClient(base_url="http://test.com")
-    with pytest.raises(AuthConfigurationError):
-        client.get_configured_models()
+    responses.add(
+        responses.GET,
+        "http://test.com/model/info",
+        json={"data": [{"model_name": "provider/model-1"}]},
+        status=200,
+    )
+    models = client.get_configured_models()
+    assert models == ["provider/model-1"]
+    assert len(responses.calls) == 1
+    assert "Authorization" not in responses.calls[0].request.headers
 
 
 @responses.activate
@@ -192,7 +201,7 @@ def test_add_model_success(
 
     body = json.loads(req.body)
     assert body["model_name"] == "local/llama3"
-    assert body["litellm_params"]["model"] == "ollama/llama3"
+    assert body["litellm_params"]["model"] == "local/llama3"
     assert body["litellm_params"]["api_base"] == "http://provider.com"
     assert body["litellm_params"]["api_key"] == "test-provider-key"
 
@@ -214,6 +223,7 @@ def test_add_model_dry_run(master_key_file: pathlib.Path) -> None:
     client.add_model(model, provider_config)
 
 
+@responses.activate
 def test_add_model_no_master_key() -> None:
     client = LiteLLMClient(base_url="http://test.com")
 
@@ -223,8 +233,16 @@ def test_add_model_no_master_key() -> None:
         provider_type="local",
     )
 
-    with pytest.raises(AuthConfigurationError):
-        client.add_model(model, provider_config)
+    responses.add(
+        responses.POST,
+        "http://test.com/model/new",
+        json={"status": "success"},
+        status=200,
+    )
+
+    client.add_model(model, provider_config)
+    assert len(responses.calls) == 1
+    assert "Authorization" not in responses.calls[0].request.headers
 
 
 def test_add_model_unreadable_provider_key(
@@ -284,21 +302,23 @@ def test_client_init_empty_key(tmp_path: pathlib.Path) -> None:
         base_url="http://test.com",
         master_key_path=str(empty_key),
     )
-    assert client.master_key is None
+    assert client.master_key == ""
 
 
 def test_client_init_unreadable_key(tmp_path: pathlib.Path) -> None:
     unreadable_key = tmp_path / "unreadable.key"
     unreadable_key.touch()
 
-    with mock.patch(
-        "pathlib.Path.open", side_effect=OSError("Permission denied")
+    with (
+        mock.patch(
+            "pathlib.Path.open", side_effect=OSError("Permission denied")
+        ),
+        pytest.raises(ProviderKeyReadError),
     ):
-        client = LiteLLMClient(
+        LiteLLMClient(
             base_url="http://test.com",
             master_key_path=str(unreadable_key),
         )
-        assert client.master_key is None
 
 
 @responses.activate
@@ -335,3 +355,11 @@ def test_add_model_empty_provider_key(
 
     body = json.loads(req.body)
     assert "api_key" not in body["litellm_params"]
+
+
+def test_auth_configuration_error_message() -> None:
+    error = AuthConfigurationError("my_key")
+    assert (
+        str(error)
+        == "Required configuration key 'my_key' is missing or unconfigured."
+    )

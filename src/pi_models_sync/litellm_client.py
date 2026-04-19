@@ -69,19 +69,13 @@ class LiteLLMClient:
         try:
             key = path.read_text(encoding="utf-8").strip()
         except OSError as e:
-            logger.warning(
-                "LiteLLM %s key file could not be read at %s. Error: %s",
-                key_name,
-                path,
-                e,
-            )
-            return None
+            raise ProviderKeyReadError(str(path), str(e)) from e
 
         if not key:
             logger.warning(
                 "LiteLLM %s key file is empty at %s.", key_name, path
             )
-            return None
+            return ""
         return key
 
     def get_inference_models(self) -> list[str]:
@@ -118,14 +112,12 @@ class LiteLLMClient:
             A list of model names.
 
         Raises:
-            AuthConfigurationError: If the master key is missing.
             requests.exceptions.RequestException: If the HTTP request fails.
         """
-        if not self.master_key:
-            raise AuthConfigurationError("master_key")
-
         url = f"{self.base_url}/model/info"
-        headers = {"Authorization": f"Bearer {self.master_key}"}
+        headers = {}
+        if self.master_key:
+            headers["Authorization"] = f"Bearer {self.master_key}"
 
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
@@ -148,13 +140,9 @@ class LiteLLMClient:
             provider_config: The provider configuration for this model.
 
         Raises:
-            AuthConfigurationError: If the master key is missing.
             ProviderKeyReadError: If the provider API key file cannot be read.
             requests.exceptions.RequestException: If the HTTP request fails.
         """
-        if not self.master_key:
-            raise AuthConfigurationError("master_key")
-
         model_name = f"{model.provider}/{model.id}"
 
         if self.dry_run:
@@ -162,7 +150,7 @@ class LiteLLMClient:
             return
 
         litellm_params = {
-            "model": f"ollama/{model.id}",
+            "model": f"{provider_config.provider_type}/{model.id}",
             "api_base": provider_config.base_url,
         }
 
@@ -178,7 +166,9 @@ class LiteLLMClient:
                 litellm_params["api_key"] = key
 
         url = f"{self.base_url}/model/new"
-        headers = {"Authorization": f"Bearer {self.master_key}"}
+        headers = {}
+        if self.master_key:
+            headers["Authorization"] = f"Bearer {self.master_key}"
         payload = {"model_name": model_name, "litellm_params": litellm_params}
 
         response = requests.post(url, headers=headers, json=payload, timeout=10)
