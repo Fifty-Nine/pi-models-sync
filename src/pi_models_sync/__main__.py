@@ -72,8 +72,67 @@ def cli(
     logger.info("  Dry Run: %s", dry_run)
     logger.info("  Pi Only: %s", pi_only)
 
-    # Placeholder for Phase 2-5 implementation
-    logger.info("Phase 1 complete. Core CLI initialized.")
+    from pi_models_sync.discovery import DiscoveredModel
+    from pi_models_sync.litellm_client import LiteLLMClient
+    from pi_models_sync.pi_config import generate_pi_config
+    from pi_models_sync.providers.config import ProviderConfig
+    from pi_models_sync.providers.ollama import (
+        CloudOllamaProvider,
+        LocalOllamaProvider,
+    )
+
+    client = LiteLLMClient(
+        base_url=litellm_url,
+        master_key_path="litellm_master.key",
+        inference_key_path="litellm_inference.key",
+        dry_run=dry_run,
+    )
+
+    if pi_only:
+        logger.info("Running in pi-only mode, bypassing discovery and sync")
+        model_ids = client.get_inference_models()
+        models = [
+            DiscoveredModel(id=m_id, provider="litellm") for m_id in model_ids
+        ]
+        if not dry_run:
+            api_key = client.inference_key or client.master_key or ""
+            generate_pi_config(models, litellm_url, api_key, pi_models_path)
+            logger.info("Successfully generated models.json at %s", pi_models_path)
+    else:
+        logger.info("Discovering and syncing models")
+        configured_models = set(client.get_configured_models())
+
+        providers = []
+        local_config = ProviderConfig(
+            base_url=local_ollama_url, provider_type="ollama"
+        )
+        providers.append((LocalOllamaProvider(local_config), local_config))
+
+        if cloud_ollama_url:
+            cloud_config = ProviderConfig(
+                base_url=cloud_ollama_url,
+                provider_type="openai",
+                api_key_path="cloud_ollama.key",
+            )
+            providers.append((CloudOllamaProvider(cloud_config), cloud_config))
+
+        for provider, config in providers:
+            for model in provider.get_models():
+                model_key = f"{model.provider}/{model.id}"
+                if model_key not in configured_models:
+                    logger.info("Adding new model: %s", model_key)
+                    client.add_model(model, config)
+                else:
+                    logger.info("Model already configured: %s", model_key)
+
+        model_ids = client.get_inference_models()
+        models = [
+            DiscoveredModel(id=m_id, provider="litellm") for m_id in model_ids
+        ]
+        if not dry_run:
+            api_key = client.inference_key or client.master_key or ""
+            generate_pi_config(models, litellm_url, api_key, pi_models_path)
+            logger.info("Successfully generated models.json at %s", pi_models_path)
 
 
 if __name__ == "__main__":
