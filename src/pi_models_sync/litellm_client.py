@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import requests
 
@@ -17,21 +17,27 @@ class LiteLLMSyncError(Exception):
     """Base exception for LiteLLM client errors."""
 
 
-class AuthConfigurationError(LiteLLMSyncError):
-    """Exception raised when a required authentication key is missing."""
-
-    def __init__(self, key_name: str) -> None:
-        super().__init__(
-            f"Required configuration key '{key_name}' is missing or "
-            "unconfigured."
-        )
-
-
 class ProviderKeyReadError(LiteLLMSyncError):
-    """Exception raised when a provider API key cannot be read."""
+    """Exception raised when an API key cannot be read."""
 
     def __init__(self, path: str, reason: str) -> None:
-        super().__init__(f"Failed to read provider API key at {path}: {reason}")
+        super().__init__(f"Failed to read API key at {path}: {reason}")
+
+
+class InvalidResponseFormatError(LiteLLMSyncError):
+    """Exception raised when a response does not match the expected
+    structure.
+    """
+
+    def __init__(self, url: str, data: Any) -> None:
+        super().__init__(f"Unexpected response format from {url}: {data}")
+
+
+class InvalidResponseDataError(LiteLLMSyncError):
+    """Exception raised when the 'data' field is not of the expected type."""
+
+    def __init__(self, got_type: str) -> None:
+        super().__init__(f"Expected 'data' field to be a list, got {got_type}")
 
 
 class LiteLLMClient:
@@ -97,7 +103,13 @@ class LiteLLMClient:
         response.raise_for_status()
 
         data = response.json()
-        models = data.get("data", [])
+        if not isinstance(data, dict) or "data" not in data:
+            raise InvalidResponseFormatError(url, data)
+
+        models = data["data"]
+        if not isinstance(models, list):
+            raise InvalidResponseDataError(type(models).__name__)
+
         return [
             str(model["id"])
             for model in models
@@ -122,7 +134,13 @@ class LiteLLMClient:
         response.raise_for_status()
 
         data = response.json()
-        models = data.get("data", [])
+        if not isinstance(data, dict) or "data" not in data:
+            raise InvalidResponseFormatError(url, data)
+
+        models = data["data"]
+        if not isinstance(models, list):
+            raise InvalidResponseDataError(type(models).__name__)
+
         return [
             str(model["model_name"])
             for model in models

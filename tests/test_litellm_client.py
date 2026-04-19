@@ -10,8 +10,9 @@ import responses
 
 from pi_models_sync.discovery import DiscoveredModel
 from pi_models_sync.litellm_client import (
-    AuthConfigurationError,
+    InvalidResponseFormatError,
     LiteLLMClient,
+    LiteLLMSyncError,
     ProviderKeyReadError,
 )
 from pi_models_sync.providers.config import ProviderConfig
@@ -357,9 +358,61 @@ def test_add_model_empty_provider_key(
     assert "api_key" not in body["litellm_params"]
 
 
-def test_auth_configuration_error_message() -> None:
-    error = AuthConfigurationError("my_key")
-    assert (
-        str(error)
-        == "Required configuration key 'my_key' is missing or unconfigured."
+@responses.activate
+def test_get_inference_models_invalid_format_no_dict() -> None:
+    client = LiteLLMClient(base_url="http://test.com")
+    responses.add(
+        responses.GET,
+        "http://test.com/v1/models",
+        json=["not_a_dict"],
+        status=200,
     )
+    with pytest.raises(
+        InvalidResponseFormatError, match="Unexpected response format"
+    ):
+        client.get_inference_models()
+
+
+@responses.activate
+def test_get_inference_models_invalid_format_no_list() -> None:
+    client = LiteLLMClient(base_url="http://test.com")
+    responses.add(
+        responses.GET,
+        "http://test.com/v1/models",
+        json={"data": "not_a_list"},
+        status=200,
+    )
+    with pytest.raises(
+        LiteLLMSyncError, match="Expected 'data' field to be a list"
+    ):
+        client.get_inference_models()
+
+
+@responses.activate
+def test_get_configured_models_invalid_format_no_dict() -> None:
+    client = LiteLLMClient(base_url="http://test.com")
+    responses.add(
+        responses.GET,
+        "http://test.com/model/info",
+        json=["not_a_dict"],
+        status=200,
+    )
+    with pytest.raises(
+        InvalidResponseFormatError, match="Unexpected response format"
+    ):
+        client.get_configured_models()
+
+
+@responses.activate
+def test_get_configured_models_invalid_format_no_list() -> None:
+    client = LiteLLMClient(base_url="http://test.com")
+    responses.add(
+        responses.GET,
+        "http://test.com/model/info",
+        json={"data": "not_a_list"},
+        status=200,
+    )
+    with pytest.raises(
+        LiteLLMSyncError, match="Expected 'data' field to be a list"
+    ):
+        client.get_configured_models()
