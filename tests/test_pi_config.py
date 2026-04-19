@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
-from pathlib import Path as PathLib
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -164,7 +164,7 @@ def test_generate_pi_config_os_error(
         error = OSError("Disk full")
         raise error
 
-    monkeypatch.setattr(PathLib, "open", mock_open)
+    monkeypatch.setattr(os, "open", mock_open)
 
     with pytest.raises(PiConfigError) as exc_info:
         generate_pi_config(

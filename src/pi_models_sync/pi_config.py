@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from typing import TYPE_CHECKING, Any
 
@@ -65,8 +66,6 @@ def generate_pi_config(
     Raises:
         PiConfigError: If there's an error during backup or file writing.
     """
-    backup_existing_config(output_path)
-
     base_url = litellm_url.rstrip("/")
     if not base_url.endswith("/v1"):
         base_url = f"{base_url}/v1"
@@ -93,9 +92,15 @@ def generate_pi_config(
         }
     }
 
+    backup_existing_config(output_path)
+
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with output_path.open("w", encoding="utf-8") as f:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+        mode = 0o600
+        with os.fdopen(
+            os.open(output_path, flags, mode), "w", encoding="utf-8"
+        ) as f:
             json.dump(config, f, indent=2)
             f.write("\n")
     except OSError as e:
