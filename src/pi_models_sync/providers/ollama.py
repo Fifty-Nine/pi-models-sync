@@ -97,8 +97,7 @@ class CloudOllamaProvider(OllamaProvider):
 
     def _load_api_key(self, path: pathlib.Path) -> None:
         try:
-            with path.open(encoding="utf-8") as f:
-                self._api_key = f.read().strip()
+            self._api_key = path.read_text(encoding="utf-8").strip()
             if not self._api_key:
                 # Treat empty file as error handled in the same way
                 self._disabled = True
