@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 class ModelProvider(abc.ABC):
     """Base interface for a model provider."""
 
+    provider_name: str
+
     def __init__(self, config: ProviderConfig) -> None:
         """Initialize the provider with a configuration.
 
